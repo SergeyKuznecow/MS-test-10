@@ -20,7 +20,7 @@ spring:
           backend-gateway-client:
             provider: my-provider
             client-id: backend-gateway-client
-            client-secret: zuCEv0bm33vGEgcg6F855IuJ39oubSni
+            client-secret: RTJHvYwavDdYQbMS1N3WH3SEdOk7OFDo
             authorization-grant-type: authorization_code
             redirect-uri: "http://backend-gateway-client:9090/login/oauth2/code/{registrationId}"
             scope: openid

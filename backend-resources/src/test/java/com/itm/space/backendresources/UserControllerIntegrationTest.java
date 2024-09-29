@@ -1,58 +1,78 @@
 package com.itm.space.backendresources;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.itm.space.backendresources.api.request.UserRequest;
 import com.itm.space.backendresources.api.response.UserResponse;
-import com.itm.space.backendresources.service.UserService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.*;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+
 @AutoConfigureMockMvc
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class UserControllerIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
-    private UserService userService;
+    TestRestTemplate restTemplate = new TestRestTemplate();
+
+    private String token;
+
+    @BeforeEach
+    void getAccessToken() throws Exception {
+        String url = "http://backend-gateway-client:8080/auth/realms/ITM/protocol/openid-connect/token";
+
+        // Устанавливаем заголовки
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        String requestBody = "client_id=" + URLEncoder.encode("backend-gateway-client", StandardCharsets.UTF_8) +
+                "&client_secret=" + URLEncoder.encode("RTJHvYwavDdYQbMS1N3WH3SEdOk7OFDo", StandardCharsets.UTF_8) +
+                "&username=" + URLEncoder.encode("user", StandardCharsets.UTF_8) +
+                "&password=" + URLEncoder.encode("user", StandardCharsets.UTF_8) +
+                "&grant_type=" + URLEncoder.encode("password", StandardCharsets.UTF_8);
+
+        // Создаем HTTP-запрос
+        HttpEntity<String> stringHttpEntity = new HttpEntity<>(requestBody, headers);
+
+        // Отправляем запрос
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, stringHttpEntity, String.class);
+        if (response.getStatusCode().is2xxSuccessful()) {
+            // Парсим тело ответа и получаем access_token
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode root = objectMapper.readTree(response.getBody());
+            token = root.path("access_token").asText();
+        } else {
+            throw new RuntimeException("Failed to get token: " + response.getStatusCode());
+        }
+    }
 
     @Test
-    @WithMockUser(roles = "MODERATOR")
-    public void testCreateUser() throws Exception {
-        UserRequest userRequest = new UserRequest(
-                "johndoe",
-                "john.doe@example.com",
-                "password123",
-                "John",
-                "Doe"
-        );
+    void createUser_ShouldReturnCreatedStatus_WhenUserIsSuccessfullyCreated() throws Exception {
+        String userJson = "{ \"username\": \"john_doe\", \"firstName\": \"John\", \"lastName\": \"Doe\", \"email\": \"john.doe@example.com\", \"password\": \"password123\" }";
 
         mockMvc.perform(post("/api/users")
+                        .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(new ObjectMapper().writeValueAsString(userRequest)))
+                        .content(userJson))
                 .andExpect(status().isOk());
-
-        verify(userService).createUser(any(UserRequest.class));
     }
 
     @Test
@@ -67,14 +87,12 @@ public class UserControllerIntegrationTest extends BaseIntegrationTest {
                 List.of("GROUP_USER")
         );
 
-        when(userService.getUserById(eq(userId))).thenReturn(userResponse);
 
         mockMvc.perform(get("/api/users/" + userId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().json(new ObjectMapper().writeValueAsString(userResponse)));
 
-        verify(userService).getUserById(eq(userId));
     }
 
     @Test
