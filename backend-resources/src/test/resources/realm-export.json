@@ -476,8 +476,10 @@
           "type": "password",
           "value": "user",
           "temporary": false
-
         }
+      ],
+      "realmRoles": [
+        "default-roles-itm"
       ],
       "groups": [
         "/Moderators"
@@ -695,7 +697,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "RTJHvYwavDdYQbMS1N3WH3SEdOk7OFDo",
+      "secret": "iltg4X2XBuqZEuOeckRMwFnOmZkf1lyw",
       "redirectUris": [
         "/login/oauth2/code/backend-gateway-client",
         "http://backend-resources:9191/swagger-ui/oauth2-redirect.html"
@@ -791,7 +793,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "5EP9AytW0FA6uR4w6D9xz3zV45ndZ37l",
+      "secret": "w26WZt5TYW651UfVJDLwxa2Aqi2aI9NA",
       "redirectUris": [],
       "webOrigins": [],
       "notBefore": 0,
